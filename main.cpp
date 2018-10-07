@@ -10,11 +10,18 @@ const int PLAYER_HEAD_HEIGHT = 40;
 const int PLAYER_START_X = 30;
 const int PLAYER_START_Y = 30;
 
+//enumeratoring snakes movements
+enum MOVE{
+    move_up,
+    move_down,
+    move_left,
+    move_right
+};
 
-//Setting Pointer to NULL
+//Setting Pointers to NULL
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
-SDL_Surface* screenSurface = NULL;
+
 
 //loading sub systems
 bool init(){
@@ -24,7 +31,8 @@ bool init(){
         success = false;
     }
     else {
-        window = SDL_CreateWindow("SNAKE CLONE", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+        window = SDL_CreateWindow("SNAKE CLONE", SDL_WINDOWPOS_UNDEFINED, 
+                                  SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     }
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (renderer == NULL){
@@ -36,14 +44,15 @@ bool init(){
 }
 
 void close(){
-    SDL_FreeSurface( screenSurface );
+
     SDL_DestroyWindow( window );
-    screenSurface = NULL;
+    renderer = NULL;
     window = NULL;
 
     SDL_Quit();
 }
 
+//colors the background white
 void fillBackground(){
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -51,16 +60,15 @@ void fillBackground(){
 }
 
 class Snake{
-    
-
     public:
         SDL_Rect head;
         SDL_Surface* surface;
-        int length, speed, x, y;
-        
-        
-        void make(){
+        bool alive;
+        int length, speed, x, y, direction;
 
+        //sets the initial values of the snake
+        void make(){
+            alive = true;
             head.x = PLAYER_START_X;
             x = PLAYER_START_X;
             y = PLAYER_START_Y;
@@ -68,38 +76,63 @@ class Snake{
             head.w = PLAYER_HEAD_WIDTH;
             head.h = PLAYER_HEAD_HEIGHT; 
             speed = PLAYER_START_SPEED;
+            direction = move_right;
         }
 
+        //draws the snake
         void draw(){
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderFillRect(renderer, &head);
 
         }
 
+        //moves the snake up
         void up(){
             y = y - speed;
+            if (y < 0){
+                y = 0;
+                alive = false;
+            }
             head.y = y;
         }
 
+        //moves the snake down
         void down(){
             y = y + speed;
+            if (y > SCREEN_HEIGHT - PLAYER_HEAD_HEIGHT){
+                y = SCREEN_HEIGHT - PLAYER_HEAD_HEIGHT;
+                alive = false;
+            }
             head.y = y;
         }
 
+        //moves the snake right
         void right(){
             x = x + speed;
+            if (x > SCREEN_WIDTH - PLAYER_HEAD_WIDTH){
+                x = SCREEN_WIDTH - PLAYER_HEAD_WIDTH;
+                alive = false;
+            }
             head.x = x;
         }
 
+        //moves the snake left
         void left(){
             x = x - speed;
+            if (x < 0){
+                x = 0;
+                alive = false;
+            }
             head.x = x;
         }
 
+
+        //increases the snakes length once a food piece is eaten
         void grow(){
             length++;
         }
 
+        //speeds up the snake once a certain score is reached
         void speedUp(){
             speed++;
         }
@@ -119,6 +152,8 @@ int main( int argc, char* args[] ){
     if(!init()){
         printf("Window could not initialized! Error: %s\n", SDL_GetError());    
     }
+    
+    //main game loop starts
     else {
         while(!quit){
             SDL_PumpEvents();
@@ -136,27 +171,51 @@ int main( int argc, char* args[] ){
             }            
 
             if (keypressed[SDL_SCANCODE_W] || keypressed[SDL_SCANCODE_UP]){
-                player.up();
-                printf("X: %d, Y: %d \n", player.x, player.y );
-
+                if(player.direction != move_down){    
+                    player.direction = move_up;
+                    printf("X: %d, Y: %d \n", player.x, player.y );
+                }
             }
 
             if (keypressed[SDL_SCANCODE_S] || keypressed[SDL_SCANCODE_DOWN]){
-                player.down();
-                printf("X: %d, Y: %d \n", player.x, player.y );
+                if(player.direction != move_up){    
+                    player.direction = move_down;
+                    printf("X: %d, Y: %d \n", player.x, player.y );
+                }
 
             }
             if (keypressed[SDL_SCANCODE_D] || keypressed[SDL_SCANCODE_RIGHT]){
-                player.right();
+                player.direction = move_right;
                 printf("X: %d, Y: %d \n", player.x, player.y );
 
             }
 
             if (keypressed[SDL_SCANCODE_A] || keypressed[SDL_SCANCODE_LEFT]){
-                player.left();
+                player.direction = move_left;
                 printf("X: %d, Y: %d \n", player.x, player.y );
 
             }
+
+            if (player.direction == move_up){
+                player.up();
+            }
+
+            else if (player.direction == move_down){
+                player.down();
+            }
+
+            else if (player.direction == move_right){
+                player.right();
+            }
+
+            else if (player.direction == move_left){
+                player.left();
+            }
+
+            if (player.alive == false){
+                quit = true;
+            }
+
             SDL_Delay(10);
             fillBackground();
             player.draw();
