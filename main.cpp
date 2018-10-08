@@ -1,5 +1,7 @@
 #include <SDL2/SDL.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 // Declaring Constants
 const int SCREEN_WIDTH = 640;
@@ -81,7 +83,7 @@ class Snake{
 
         //draws the snake
         void draw(){
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_SetRenderDrawColor(renderer, 100, 0, 0, 255);
             SDL_RenderFillRect(renderer, &head);
 
         }
@@ -139,14 +141,41 @@ class Snake{
     
 };
 
-class food{
+class Food{
+    public:
+        SDL_Rect rect;
+        SDL_Surface* surface;
+        bool eaten = false;
+        int x = 100; 
+        int y = 100;
+
+        void make(){
+            
+        }
+        void appear(){
+            rect.w = PLAYER_HEAD_WIDTH;
+            rect.h = PLAYER_HEAD_HEIGHT;
+            rect.x = rand() % SCREEN_WIDTH - PLAYER_HEAD_HEIGHT;
+            rect.y = rand() % SCREEN_HEIGHT - PLAYER_HEAD_HEIGHT;
+        }
+
+        void draw(){
+            SDL_SetRenderDrawColor(renderer, 200, 0, 0, 255);
+            SDL_RenderFillRect(renderer, &rect);
+        }
 
 };
 
 int main( int argc, char* args[] ){
+
+    //using time as the random generator seed
+    srand(time(0));
+    
     bool quit = false;
     SDL_Event e;
     Snake player;
+    Food food;
+    food.eaten = true;
     player.make();
     
     if(!init()){
@@ -158,12 +187,14 @@ int main( int argc, char* args[] ){
         while(!quit){
             SDL_PumpEvents();
             const Uint8 *keypressed = SDL_GetKeyboardState(NULL);
-
+            // handles quiting events (pressing the X, etc)
             while( SDL_PollEvent( &e ) != 0 ) { 
                 if( e.type == SDL_QUIT ) { 
                     quit = true; 
                 } 
             }
+
+//keyboard event handling *****************************************************************************************************
 
             if (keypressed[SDL_SCANCODE_ESCAPE]){
                 quit = true; 
@@ -185,16 +216,26 @@ int main( int argc, char* args[] ){
 
             }
             if (keypressed[SDL_SCANCODE_D] || keypressed[SDL_SCANCODE_RIGHT]){
-                player.direction = move_right;
-                printf("X: %d, Y: %d \n", player.x, player.y );
-
+                if(player.direction != move_left){
+                    player.direction = move_right;
+                    printf("X: %d, Y: %d \n", player.x, player.y );
+                }
             }
 
             if (keypressed[SDL_SCANCODE_A] || keypressed[SDL_SCANCODE_LEFT]){
-                player.direction = move_left;
-                printf("X: %d, Y: %d \n", player.x, player.y );
+                if(player.direction != move_right){
+                    player.direction = move_left;
+                    printf("X: %d, Y: %d \n", player.x, player.y );
+                }
+            }
+
+
+            if (keypressed[SDL_SCANCODE_F]){
+                printf("FOOD X: %d, Y: %d \n", food.x, food.y );
+                printf("FOOD RECT X: %d, Y: %d \n", food.rect.x, food.rect.y );
 
             }
+//setting player directiopm ***************************************************************************************************
 
             if (player.direction == move_up){
                 player.up();
@@ -216,9 +257,21 @@ int main( int argc, char* args[] ){
                 quit = true;
             }
 
+            if (food.eaten == true){
+                food.appear();
+                food.eaten = false;
+                printf("Food has appeared! 1\n");
+            }
+
+            
             SDL_Delay(10);
             fillBackground();
+            if (food.eaten == false){
+                food.draw();
+            }
+            food.draw();
             player.draw();
+            
             SDL_RenderPresent(renderer);
         }
     }
