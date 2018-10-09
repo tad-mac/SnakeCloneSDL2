@@ -1,16 +1,20 @@
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <SDL2/SDL_ttf.h>
 #include <time.h>
+#include <string>
 
 // Declaring Constants
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
+const int PLAY_HEIGHT = 440;
 const int PLAYER_START_SPEED = 1;
 const int PLAYER_HEAD_WIDTH = 40;
 const int PLAYER_HEAD_HEIGHT = 40;
-const int PLAYER_START_X = 30;
+const int PLAYER_START_X = 50;
 const int PLAYER_START_Y = 30;
+const char *font_path = "assets/font/FreeSans.ttf";
 
 //enumeratoring snakes movements
 enum MOVE{
@@ -23,7 +27,9 @@ enum MOVE{
 //Setting Pointers to NULL
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
-
+SDL_Texture* score_text = NULL;
+SDL_Rect score_rect;
+TTF_Font* font = NULL;
 
 //loading sub systems
 bool init(){
@@ -41,6 +47,13 @@ bool init(){
         success = false;
     }
 
+    TTF_Init();
+    font = TTF_OpenFont(font_path, 24);
+    if (font == NULL) {
+        fprintf(stderr, "error: font not found\n");
+        exit(EXIT_FAILURE);
+    }
+
 
     return success;
 }
@@ -54,6 +67,14 @@ void close(){
     SDL_Quit();
 }
 
+
+// int printScore(int score){
+//     score++;
+//     sprintf(StringScore, "%d", score);
+//     strcat(ScoreText, StringScore);
+//     return score;
+// }
+
 //colors the background white
 void fillBackground(){
     SDL_RenderClear(renderer);
@@ -61,6 +82,29 @@ void fillBackground(){
     SDL_RenderFillRect(renderer, NULL);
 }
 
+void RenderText(SDL_Renderer *renderer, int x, int y, char *text,
+        TTF_Font *font, SDL_Texture **texture, SDL_Rect *rect){
+    int text_width = 12;
+    int text_height = 12;
+    SDL_Surface *surface;
+    SDL_Color textColor = {0, 0, 0, 0};
+
+    surface = TTF_RenderText_Solid(font, text, textColor);
+    *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    text_width = surface->w;
+    text_height = surface->h;
+    SDL_FreeSurface(surface);
+    rect->x = x;
+    rect->y = y;
+    rect->w = text_width;
+    rect->h = text_height;
+}
+
+
+void DrawText(){
+    SDL_SetRenderDrawColor(renderer, 200, 0, 0, 255);
+    SDL_RenderCopy(renderer, score_text, NULL, &score_rect);
+}
 class Snake{
     public:
         SDL_Rect head;
@@ -91,8 +135,8 @@ class Snake{
         //moves the snake up
         void up(){
             y = y - speed;
-            if (y < 0){
-                y = 0;
+            if (y < PLAYER_START_Y){
+                y = PLAYER_START_Y;
                 alive = false;
             }
             head.y = y;
@@ -149,14 +193,14 @@ class Food{
         int x = 100; 
         int y = 100;
 
-        void make(){
+        // void make(){
             
-        }
+        // }
         void appear(){
             rect.w = PLAYER_HEAD_WIDTH;
             rect.h = PLAYER_HEAD_HEIGHT;
-            rect.x = rand() % SCREEN_WIDTH - PLAYER_HEAD_HEIGHT;
-            rect.y = rand() % SCREEN_HEIGHT - PLAYER_HEAD_HEIGHT;
+            rect.x = rand() % 600;
+            rect.y = rand() % 400;
         }
 
         void draw(){
@@ -169,6 +213,9 @@ class Food{
 int main( int argc, char* args[] ){
 
     //using time as the random generator seed
+    int score = 0;
+    char StringScore[32];
+    char ScoreText[100] = "Score: ";
     srand(time(0));
     
     bool quit = false;
@@ -185,13 +232,27 @@ int main( int argc, char* args[] ){
     //main game loop starts
     else {
         while(!quit){
+            
             SDL_PumpEvents();
             const Uint8 *keypressed = SDL_GetKeyboardState(NULL);
-            // handles quiting events (pressing the X, etc)
+            
             while( SDL_PollEvent( &e ) != 0 ) { 
+                // handles quiting events (pressing the X, etc)
                 if( e.type == SDL_QUIT ) { 
                     quit = true; 
-                } 
+                }
+                //debugging - moves the food and adds 1 to the score
+                if(e.type == SDL_KEYDOWN)
+                    {
+                        if (e.key.keysym.sym == SDLK_f)
+                        {
+                            food.eaten = true;
+                            score = score + 1;
+                            sprintf(StringScore, "%d", score);
+                            strcat(ScoreText, StringScore);   
+                        }
+                    }
+
             }
 
 //keyboard event handling *****************************************************************************************************
@@ -229,12 +290,6 @@ int main( int argc, char* args[] ){
                 }
             }
 
-
-            if (keypressed[SDL_SCANCODE_F]){
-                printf("FOOD X: %d, Y: %d \n", food.x, food.y );
-                printf("FOOD RECT X: %d, Y: %d \n", food.rect.x, food.rect.y );
-
-            }
 //setting player directiopm ***************************************************************************************************
 
             if (player.direction == move_up){
@@ -254,6 +309,7 @@ int main( int argc, char* args[] ){
             }
 
             if (player.alive == false){
+                printf("Game Over!\n");
                 quit = true;
             }
 
@@ -271,7 +327,9 @@ int main( int argc, char* args[] ){
             }
             food.draw();
             player.draw();
-            
+            RenderText(renderer, 0, 0, ScoreText, font, &score_text, &score_rect);
+            DrawText();
+
             SDL_RenderPresent(renderer);
         }
     }
